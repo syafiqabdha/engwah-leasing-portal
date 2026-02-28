@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Database Service (Not exposed to the outside world)
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ew_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-pancatz_leasing}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-admin} -d ${DB_NAME:-pancatz_leasing}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - app-net
+
+  # Backend API Service
+  backend:
+    build: ./backend
+    container_name: ew_api
+    restart: always
+    ports:
+      - "5000:5000" # Expose backend port directly
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-pancatz_leasing}
+      JWT_SECRET: ${JWT_SECRET}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-qwen2.5:1.5b}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      LLM_API_URL: ${LLM_API_URL:-http://ollama:11434/api/chat}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./.workspace:/app/.workspace
+    networks:
+      - app-net
+
+  # Frontend Service (Serving Built Static Files via Nginx inside Docker)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod # Uses multi-stage build mapping React dist to Nginx
+      args:
+        # Pass the VITE_API_URL during the build stage so it gets baked into the static files
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5000/api}
+    container_name: ew_ui
+    restart: always
+    ports:
+      - "80:80" # Expose frontend on standard HTTP port
+    networks:
+      - app-net
+
+  # Ollama Service (Optional: Exclude if using a cloud LLM)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ew_ollama
+    restart: always
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - app-net
+
+volumes:
+  db_data:
+  ollama_data:
+
+
+networks:
+  app-net:
