@@ -18,9 +18,26 @@ The **Engwah Leasing Portal** is an enterprise-grade Property Management System 
 
 *   **Frontend**: React.js (Vite) + Tailwind CSS + Markdown Rendering
 *   **Backend**: Node.js (Express) REST API + Event-Driven Architecture
-*   **Database**: PostgreSQL / MySQL (Relational Data Integrity)
+*   **Database**: PostgreSQL (pgvector)
 *   **AI Engine**: Hybrid support for Ollama (Local) or OpenAI/Cloud APIs
 *   **Infrastructure**: Docker Compose + Tailscale
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+    User([User Client]) -->|HTTP: 5173| Frontend(Frontend Container<br/>React + Vite)
+    Frontend -->|HTTP: 5000| Backend(Backend Container<br/>Node.js + Express)
+
+    Backend -->|SQL| Database[(Database Container<br/>PostgreSQL + pgvector)]
+    Backend -->|REST API| Ollama(Ollama Container<br/>Local LLM Service)
+
+    classDef container fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef db fill:#ff9,stroke:#333,stroke-width:2px;
+
+    class Frontend,Backend,Ollama container;
+    class Database db;
+```
 
 ## Getting Started
 
