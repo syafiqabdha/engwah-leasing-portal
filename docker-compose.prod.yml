@@ -39,7 +39,7 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
       LLM_API_URL: ${LLM_API_URL:-http://ollama:11434/api/chat}
       # CORS: same-origin via Nginx proxy — only need the public hostname here
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://ewpl-svr.tail5e6f37.ts.net,http://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://ewpl-svr.tail5e6f37.ts.net,https://ewpl-svr.tail5e6f37.ts.net,http://localhost,http://localhost:5173}
       NODE_ENV: production
     depends_on:
       db:
