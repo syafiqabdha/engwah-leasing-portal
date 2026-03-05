@@ -1,0 +1,109 @@
+GITHUB RELEASE PUSH GUIDE — Engwah Leasing Portal
+Generated: 2026-03-05
+=======================================================
+
+STATUS:
+  ✅ Commit created:   ad73fbb — "release: v1.0.0 Security hardening, UI overhaul..."
+  ✅ Tag created:      v1.0.0  (annotated, on HEAD)
+  ✅ .env.example:     API key scrubbed — safe for public push
+  ✅ .prodignore/:     All dev artifacts quarantined + gitignored
+  ✅ CHANGELOG.md:     v1.0.0 release entry complete
+  ✅ Readme.md:        Conflict-free, accurate, production-ready
+
+STEP 1 — CREATE THE NEW GITHUB REPOSITORY
+==========================================
+1. Open browser → https://github.com/new
+2. Fill in:
+     Repository name:  engwah-leasing-portal
+     Description:      Enterprise property management system with AI leasing analyst (Eva)
+     Visibility:       Private  ← (recommended — contains business data)
+     ☐ Add README      (leave UNCHECKED — we already have one)
+     ☐ Add .gitignore  (leave UNCHECKED — we already have one)
+     ☐ Choose license  (leave UNCHECKED — we already have LICENSE)
+3. Click "Create repository"
+4. On the next page GitHub shows you — COPY the repo URL. It will look like:
+     https://github.com/syafiqabdha/engwah-leasing-portal.git
+
+STEP 2 — POINT YOUR LOCAL REPO TO THE NEW REMOTE
+==================================================
+Run these commands in PowerShell from the project root:
+(c:\docker\dev-ew-leasing-app\ew-leasing-app)
+
+  # Option A: Push to NEW repo (keep old remote as 'origin-old')
+  git remote rename origin origin-old
+  git remote add origin https://github.com/syafiqabdha/engwah-leasing-portal.git
+
+  # Option B: Push to BOTH (keep old ew-leasing-app + add new)
+  git remote set-url --add --push origin https://github.com/syafiqabdha/engwah-leasing-portal.git
+
+STEP 3 — PUSH THE BRANCH
+==========================
+  git push -u origin develepment
+
+STEP 4 — PUSH THE RELEASE TAG
+================================
+  git push origin v1.0.0
+
+STEP 5 — CREATE A GITHUB RELEASE (from the tag)
+=================================================
+1. Go to: https://github.com/syafiqabdha/engwah-leasing-portal/releases/new
+2. Click "Choose a tag" → select "v1.0.0"
+3. Set Release title:  v1.0.0 — Initial Production Release
+4. Paste this into the release body:
+
+---
+## 🎉 Engwah Leasing Portal — v1.0.0
+
+First production-ready release of the Engwah Leasing Portal.
+
+### What's Included
+- 🔐 Security hardened (OWASP audit — all 4 critical vulnerabilities resolved)
+- 🤖 Eva AI chatbot with live database context
+- 👔 Director role with full admin equivalence
+- 🌓 Dark / Light mode with localStorage persistence
+- 📱 PWA — installable on iOS and Android
+- 🏢 Full property, unit, document, and contact management
+- 📣 Announcement system with role-based publishing
+- 🐳 One-command Docker Compose deployment
+
+### Quick Start
+```bash
+cp backend/.env.example backend/.env
+# Fill in JWT_SECRET and DB_PASSWORD in .env
+docker-compose up --build
+# Open http://localhost:5173
+```
+
+See [SETUP_DEPLOYMENT.md](SETUP_DEPLOYMENT.md) for full deployment instructions.
+---
+
+5. Check "Set as the latest release"
+6. Click "Publish release"
+
+STEP 6 — OPTIONAL: ADD BRANCH PROTECTION (Recommended)
+========================================================
+1. Go to: Settings → Branches → Add branch protection rule
+2. Branch name pattern: main (or develepment)
+3. Enable:
+   ☑ Require pull request reviews before merging
+   ☑ Dismiss stale pull request approvals when new commits are pushed
+
+VERIFICATION CHECKLIST
+========================
+  [ ] https://github.com/syafiqabdha/engwah-leasing-portal visible
+  [ ] Readme.md renders correctly (no conflict markers)
+  [ ] CHANGELOG.md shows v1.0.0 at top
+  [ ] SETUP_DEPLOYMENT.md present
+  [ ] .env or any file with real credentials NOT visible in repo
+  [ ] Releases page shows v1.0.0 with tag
+  [ ] .prodignore/ folder NOT appearing in the GitHub file tree
+        (it is gitignored — if visible, run: git rm -r --cached .prodignore)
+
+COMPLETE PUSH COMMAND SEQUENCE (copy-paste ready)
+===================================================
+Replace URL with your actual new repo URL after Step 1.
+
+  git remote rename origin origin-old
+  git remote add origin https://github.com/syafiqabdha/engwah-leasing-portal.git
+  git push -u origin develepment
+  git push origin v1.0.0
