@@ -1,5 +1,5 @@
 # Stage 1: Build the React Application
-FROM node:18-alpine as builder
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
@@ -10,31 +10,53 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Set environment variables for the build process (important for Vite to bake them in)
-# You might pass these as build args in a CI/CD pipeline, but here we assume the backend is under the same domain.
+# VITE_API_URL must be /api (relative) so the browser always calls the same server
+# Nginx will proxy /api → backend container internally
 ENV VITE_API_URL=/api
 
 # Build the project
 RUN npm run build
 
-# Stage 2: Serve the application with Nginx
+# ─────────────────────────────────────────────────────────────────
+# Stage 2: Serve with Nginx — acts as both static host AND API proxy
+# ─────────────────────────────────────────────────────────────────
 FROM nginx:alpine
 
-# Remove default Nginx static assets
-RUN rm -rf /usr/share/nginx/html/*
+# Remove default Nginx config
+RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 
-# Copy built assets from builder stage
+# Copy the built React app
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Add custom Nginx configuration to handle React Router (Single Page Application routing)
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-    root /usr/share/nginx/html; \
-    index index.html index.htm; \
-    try_files $$uri $$uri/ /index.html; \
-    } \
-    }' > /etc/nginx/conf.d/default.conf
+# Nginx config:
+# - Serves the React SPA on /
+# - Proxies /api/* requests to the backend container (ew_api:5000)
+# - Proxies /api/uploads/* for static file serving from backend
+RUN printf 'server {\n\
+    listen 80;\n\
+    server_name _;\n\
+    client_max_body_size 15M;\n\
+    \n\
+    # Serve React SPA\n\
+    location / {\n\
+    root /usr/share/nginx/html;\n\
+    index index.html;\n\
+    try_files $uri $uri/ /index.html;\n\
+    }\n\
+    \n\
+    # Proxy API calls to the backend container\n\
+    location /api/ {\n\
+    proxy_pass http://ew_api:5000/api/;\n\
+    proxy_http_version 1.1;\n\
+    proxy_set_header Host $host;\n\
+    proxy_set_header X-Real-IP $remote_addr;\n\
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n\
+    proxy_set_header X-Forwarded-Proto $scheme;\n\
+    proxy_connect_timeout 60s;\n\
+    proxy_read_timeout 120s;\n\
+    client_max_body_size 15M;\n\
+    }\n\
+    }\n' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

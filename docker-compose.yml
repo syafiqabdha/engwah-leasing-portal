@@ -38,6 +38,8 @@ services:
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
       # Point to Ollama API Chat Endpoint
       LLM_API_URL: ${LLM_API_URL:-http://ollama:11434/api/chat}
+      # CORS: comma-separated list of allowed frontend origins
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://ewpl-svr.tail5e6f37.ts.net:5173}
     depends_on:
       db:
         condition: service_healthy
