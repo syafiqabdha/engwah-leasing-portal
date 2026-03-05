@@ -163,8 +163,8 @@ export function NotificationPanel({ isOpen, onClose, user, malls, isMobile, anno
         setShowForm(false);
     };
 
-    const canCreate = ['admin', 'staff'].includes(user?.role);
-    const canDelete = user?.role === 'admin';
+    const canCreate = ['admin', 'director', 'staff'].includes(user?.role);
+    const canDelete = ['admin', 'director'].includes(user?.role);
 
     if (!isOpen) return null;
 
@@ -213,7 +213,7 @@ export function NotificationPanel({ isOpen, onClose, user, malls, isMobile, anno
                                     {!showForm ? (
                                         <button
                                             onClick={() => setShowForm(true)}
-                                            className="w-full py-2 border-2 border-dashed border-indigo-200 rounded-xl text-indigo-500 font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-all flex items-center justify-center gap-2"
+                                            className="w-full neu-btn py-3 text-indigo-600 flex items-center justify-center gap-2"
                                         >
                                             <Plus size={18} /> Post Announcement
                                         </button>
@@ -264,7 +264,7 @@ export function NotificationPanel({ isOpen, onClose, user, malls, isMobile, anno
                                                         onChange={e => setExpiryDate(e.target.value)}
                                                     />
                                                 </div>
-                                                <button type="submit" className="w-full bg-linear-to-r from-indigo-600 to-purple-600 text-white py-2 rounded-lg text-sm font-bold shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all">
+                                                <button type="submit" className="w-full neu-btn neu-btn-primary py-2 mt-2">
                                                     Post Now
                                                 </button>
                                             </form>

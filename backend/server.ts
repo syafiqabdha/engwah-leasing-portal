@@ -12,7 +12,28 @@ import { eq, desc, sql } from 'drizzle-orm';
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// --- STARTUP GUARD (CRIT-04) ---
+if (!process.env.JWT_SECRET) {
+    console.error('FATAL: JWT_SECRET environment variable is not set. Server will not start in production without it.');
+    if (process.env.NODE_ENV === 'production') process.exit(1);
+    console.warn('WARNING: Falling back to insecure default secret. Set JWT_SECRET immediately.');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret_before_deploy';
+
+// --- CORS (CRIT-03) --- Restrict to known frontend origins only
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(o => o.trim());
+app.use(cors({
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow server-to-server (no origin) and whitelisted origins
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+        }
+    },
+    credentials: true
+}));
 
 // Serve uploaded files statically
 app.use('/api/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -24,7 +45,10 @@ const LLM_MODEL = process.env.LLM_MODEL || 'qwen2.5:1.5b';
 
 const ensureModel = async () => {
     try {
-        const response = await fetch(`${OLLAMA_HOST}/api/tags`);
+        const headers: any = { 'Content-Type': 'application/json' };
+        if (OLLAMA_API_KEY) headers['Authorization'] = `Bearer ${OLLAMA_API_KEY}`;
+
+        const response = await fetch(`${OLLAMA_HOST}/api/tags`, { headers });
         if (response.ok) {
             const data: any = await response.json();
             const hasModel = data.models.some((m: any) => m.name.includes(LLM_MODEL));
@@ -32,6 +56,7 @@ const ensureModel = async () => {
                 console.log(`Model ${LLM_MODEL} not found. Triggering pull...`);
                 await fetch(`${OLLAMA_HOST}/api/pull`, {
                     method: 'POST',
+                    headers,
                     body: JSON.stringify({ name: LLM_MODEL })
                 });
             } else {
@@ -83,7 +108,25 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + '-' + safeName);
     }
 });
-const upload = multer({ storage });
+const upload = multer({
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max per file
+    fileFilter: (req: any, file: any, cb: multer.FileFilterCallback) => {
+        const allowedMimeTypes = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'application/pdf',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'application/msword'
+        ];
+        if (allowedMimeTypes.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error(`File type '${file.mimetype}' is not permitted.`));
+        }
+    }
+});
 
 // Rate Limiter
 const rateLimit = new Map();
@@ -147,7 +190,7 @@ const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) 
     const token = authHeader && authHeader.split(' ')[1];
     if (!token) return res.sendStatus(401);
 
-    jwt.verify(token, process.env.JWT_SECRET || 'secret', (err: any, user: any) => {
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
         if (err) return res.sendStatus(403);
         req.user = user;
         next();
@@ -194,7 +237,11 @@ app.post('/api/setup', async (req, res) => {
             role: 'admin'
         }).returning();
 
-        const token = jwt.sign({ id: newUser.id, role: newUser.role }, process.env.JWT_SECRET || 'secret', { expiresIn: '24h' });
+        const token = jwt.sign(
+            { id: newUser.id, role: newUser.role, email: newUser.email },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
         res.json({ token, user: { id: newUser.id, email: newUser.email, role: newUser.role, firstName: newUser.firstName, lastName: newUser.lastName } });
     } catch (err) {
         console.error(err);
@@ -209,10 +256,16 @@ app.post('/api/login', async (req: Request, res: Response) => {
         if (rows.length === 0) return res.status(401).json({ error: 'User not found' });
 
         const user = rows[0];
+        // CRIT-01: Only use bcrypt verification — no plaintext bypass
         const valid = await bcrypt.compare(password, user.passwordHash).catch(() => false);
-        if (!valid && password !== 'password' && password !== 'admin123') return res.status(403).json({ error: 'Invalid credentials' });
+        if (!valid) return res.status(403).json({ error: 'Invalid credentials' });
 
-        const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET || 'secret');
+        // CRIT-02: Encode email + expiry into JWT
+        const token = jwt.sign(
+            { id: user.id, role: user.role, email: user.email },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
         res.json({ token, user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, avatarUrl: user.avatarUrl, role: user.role } });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -220,7 +273,7 @@ app.post('/api/login', async (req: Request, res: Response) => {
 });
 
 app.get('/api/users', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         const rows = await db.select({
             id: users.id,
@@ -238,7 +291,7 @@ app.get('/api/users', authenticateToken, async (req: AuthRequest, res: Response)
 });
 
 app.post('/api/users', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { email, password, role, firstName, lastName } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -250,7 +303,7 @@ app.post('/api/users', authenticateToken, async (req: AuthRequest, res: Response
 });
 
 app.delete('/api/users/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         await db.delete(users).where(eq(users.id, parseInt(req.params.id)));
         res.json({ success: true });
@@ -260,7 +313,7 @@ app.delete('/api/users/:id', authenticateToken, async (req: AuthRequest, res: Re
 });
 
 app.put('/api/users/:id/password', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.id)) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role) && req.user.id !== parseInt(req.params.id)) return res.status(403).json({ error: 'Access denied' });
     const { password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -334,7 +387,7 @@ app.get('/api/users/status', authenticateToken, async (req: AuthRequest, res: Re
 
 // --- CONTACTS ---
 app.get('/api/contacts', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (['admin', 'staff'].indexOf(req.user.role) === -1) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director', 'staff'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         const rows = await db.select().from(contacts).orderBy(desc(contacts.createdAt));
         res.json(rows);
@@ -344,7 +397,7 @@ app.get('/api/contacts', authenticateToken, async (req: AuthRequest, res: Respon
 });
 
 app.post('/api/contacts', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (['admin', 'staff'].indexOf(req.user.role) === -1) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director', 'staff'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { name, email, phone, company, type, remark } = req.body;
     try {
         const [result] = await db.insert(contacts)
@@ -357,7 +410,7 @@ app.post('/api/contacts', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 app.delete('/api/contacts/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (['admin', 'staff'].indexOf(req.user.role) === -1) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director', 'staff'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         await db.delete(contacts).where(eq(contacts.id, parseInt(req.params.id)));
         res.json({ success: true });
@@ -378,7 +431,7 @@ app.get('/api/malls', authenticateToken, async (req: AuthRequest, res: Response)
 });
 
 app.post('/api/malls', authenticateToken, upload.single('image'), async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { name, location, slug } = req.body;
     let imageUrl = null;
     if (req.file) imageUrl = `/uploads/malls/${req.file.filename}`;
@@ -398,7 +451,6 @@ app.post('/api/malls', authenticateToken, upload.single('image'), async (req: Au
             });
             res.json({ success: true, id: newMallId, image_url: imageUrl });
         });
-        refreshEvaContext();
     } catch (err: any) {
         if (req.file) fs.unlink(path.join(__dirname, 'uploads/malls', req.file.filename), () => { });
         res.status(500).json({ error: err.message });
@@ -406,7 +458,7 @@ app.post('/api/malls', authenticateToken, upload.single('image'), async (req: Au
 });
 
 app.put('/api/malls/:id', authenticateToken, upload.single('image'), async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { name, location, slug } = req.body;
     const mallId = parseInt(req.params.id);
 
@@ -422,7 +474,7 @@ app.put('/api/malls/:id', authenticateToken, upload.single('image'), async (req:
 });
 
 app.put('/api/malls/:id/levels', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { levels } = req.body;
     const mallId = parseInt(req.params.id);
 
@@ -439,7 +491,7 @@ app.put('/api/malls/:id/levels', authenticateToken, async (req: AuthRequest, res
 });
 
 app.delete('/api/malls/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         await db.delete(malls).where(eq(malls.id, parseInt(req.params.id)));
         res.json({ success: true });
@@ -517,7 +569,6 @@ app.put('/api/units/:id', authenticateToken, async (req: AuthRequest, res: Respo
 
     try {
         await db.update(units).set(toCamelKeys(cleanData)).where(eq(units.id, id));
-        refreshEvaContext();
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -525,7 +576,7 @@ app.put('/api/units/:id', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 app.post('/api/units', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const data = req.body;
     const cleanData = { ...data };
     delete cleanData.id;
@@ -533,7 +584,6 @@ app.post('/api/units', authenticateToken, async (req: AuthRequest, res: Response
 
     try {
         await db.insert(units).values(toCamelKeys(cleanData));
-        refreshEvaContext();
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -541,10 +591,9 @@ app.post('/api/units', authenticateToken, async (req: AuthRequest, res: Response
 });
 
 app.delete('/api/units/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         await db.delete(units).where(eq(units.id, parseInt(req.params.id)));
-        refreshEvaContext();
         res.json({ success: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -562,7 +611,7 @@ app.get('/api/documents', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 app.post('/api/documents', authenticateToken, upload.single('file'), async (req: AuthRequest, res: Response) => {
-    if (['admin', 'staff'].indexOf(req.user.role) === -1) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director', 'staff'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     if (!req.file) return res.status(400).json({ error: 'No file' });
     const { title, mall_id, type } = req.body;
 
@@ -578,7 +627,7 @@ app.post('/api/documents', authenticateToken, upload.single('file'), async (req:
 });
 
 app.delete('/api/documents/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         const rows = await db.select({ fileUrl: salesKits.fileUrl }).from(salesKits).where(eq(salesKits.id, parseInt(req.params.id)));
         if (rows.length > 0) {
@@ -597,7 +646,7 @@ app.delete('/api/documents/:id', authenticateToken, async (req: AuthRequest, res
 });
 
 app.post('/api/malls/:id/image', authenticateToken, upload.single('image'), async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     if (!req.file) return res.status(400).json({ error: 'No image' });
     const fileUrl = `/uploads/malls/${req.file.filename}`;
     try {
@@ -619,11 +668,12 @@ app.get('/api/announcements', authenticateToken, async (req: AuthRequest, res: R
 });
 
 app.post('/api/announcements', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (['admin', 'staff'].indexOf(req.user.role) === -1) return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director', 'staff'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     const { title, description, expiry_date, target_property } = req.body;
 
     try {
-        const author = req.user.username || 'system';
+        // QA-01: author derived from email in JWT — no username field in token
+        const author = req.user.email ? req.user.email.split('@')[0] : 'system';
         const role = req.user.role;
         const [result] = await db.insert(announcements).values({
             title, description, author, role,
@@ -641,7 +691,7 @@ app.post('/api/announcements', authenticateToken, async (req: AuthRequest, res: 
 });
 
 app.delete('/api/announcements/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
-    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Access denied' });
+    if (!['admin', 'director'].includes(req.user.role)) return res.status(403).json({ error: 'Access denied' });
     try {
         await db.delete(announcements).where(eq(announcements.id, parseInt(req.params.id)));
         res.json({ success: true });
@@ -694,7 +744,7 @@ app.delete('/api/dashboard/notes/:id', authenticateToken, async (req: AuthReques
     try {
         const rows = await db.select().from(dashboardNotes).where(eq(dashboardNotes.id, noteId));
         if (rows.length === 0) return res.status(404).json({ error: 'Note not found' });
-        if (req.user.role !== 'admin' && rows[0].userId !== req.user.id) {
+        if (!['admin', 'director'].includes(req.user.role) && rows[0].userId !== req.user.id) {
             return res.status(403).json({ error: 'Access denied' });
         }
         await db.delete(dashboardNotes).where(eq(dashboardNotes.id, noteId));
@@ -776,6 +826,14 @@ app.post('/api/chat', authenticateToken, async (req: AuthRequest, res: Response)
 
     if (OFFENSIVE_WORDS.some(word => message.toLowerCase().includes(word))) {
         return res.json({ response: "I am designed to be professional. Please maintain a respectful tone." });
+    }
+
+    if (message.toLowerCase() === '\\refresh') {
+        if (!['admin', 'director'].includes(req.user.role)) {
+            return res.json({ response: "Access denied. Only Admins and Directors can refresh my memory." });
+        }
+        await refreshEvaContext();
+        return res.json({ response: "Memory refreshed successfully. I am now aware of the latest internal updates." });
     }
 
     if (message.toLowerCase() === 'logout' || message.toLowerCase() === 'close') {

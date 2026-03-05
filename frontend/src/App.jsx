@@ -3,7 +3,7 @@ import {
   Building, MapPin, User, LogOut, Search, Edit3, Check, X,
   LayoutGrid, Store, FileText, Download, Upload, Shield,
   Droplet, Zap, Wifi, Wind, AlertTriangle, File, Plus, Trash2,
-  Users, Key, FolderOpen, Image, Camera, Map, FilePlus, Settings, Menu
+  Users, Key, FolderOpen, Image, Camera, Map, FilePlus, Settings, Menu, Moon, Sun
 } from 'lucide-react';
 import { NotificationBell, NotificationPanel, useAnnouncements } from './components/NotificationSystem';
 import EvaChatbot from './components/EvaChatbot';
@@ -19,138 +19,179 @@ const GlobalStyles = () => (
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     
     :root {
-      /* Light Theme Colors */
-      --bg-color: #e0e5ec;
-      --surface-color: #e0e5ec;
-      --text-main: #4a5568;
-      --text-muted: #a0aec0;
-      
-      /* Light Theme Shadows */
-      --shadow-light: #ffffff;
-      --shadow-dark: #a3b1c6;
-      
-      --accent: #6d5dfc;
+      /* Clean Minimal Theme Colors */
+      --bg-color: #f8fafc;
+      --surface-color: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-light: #e2e8f0;
+      --accent: #4f46e5;
+      --accent-hover: #4338ca;
+    }
+
+    .dark {
+      --bg-color: #0f172a;
+      --surface-color: #1e293b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-light: #334155;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+    }
+
+    /* Focused Design specific mappings for Light-only hardcodes */
+    .dark .bg-white, .dark .bg-slate-50, .dark .bg-\\[\\#F9FAFB\\] {
+      background-color: var(--surface-color) !important;
+    }
+    .dark .text-slate-800, .dark .text-slate-700, .dark .text-slate-900 {
+      color: var(--text-main) !important;
+    }
+    .dark .text-slate-500, .dark .text-slate-400, .dark .text-slate-600 {
+      color: var(--text-muted) !important;
+    }
+    .dark .border-slate-100, .dark .border-slate-200, .dark .border-slate-300 {
+      border-color: var(--border-light) !important;
+    }
+    .dark .bg-slate-100 {
+      background-color: var(--border-light) !important;
+    }
+    .dark .bg-white\\/50, .dark .bg-white\\/95 {
+      background-color: rgba(30, 41, 59, 0.8) !important;
     }
 
     body {
       font-family: 'Inter', sans-serif;
-      background-color: transparent; /* Allow animated-bg to show */
+      background-color: var(--bg-color);
       color: var(--text-main);
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
     }
     
-    /* Animated Background */
+    /* Removed heavy animated gradient background to reduce cognitive load completely */
     .animated-bg {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: -1;
-      background-color: var(--bg-color);
-      background-image: 
-        radial-gradient(circle at 15% 50%, rgba(109, 93, 252, 0.15), transparent 30%), 
-        radial-gradient(circle at 85% 30%, rgba(255, 107, 107, 0.15), transparent 30%);
-      animation: moveGradient 20s ease-in-out infinite alternate;
+      display: none;
     }
 
-    @keyframes moveGradient {
-      0% { background-position: 0% 50%; transform: scale(1); }
-      100% { background-position: 100% 50%; transform: scale(1.1); }
-    }
-
-    /* Neumorphism Base Classes */
+    /* Clean Minimal Base Classes */
     .neu-panel {
       background: var(--surface-color);
-      border-radius: 20px;
-      box-shadow: 9px 9px 16px var(--shadow-dark), -9px -9px 16px var(--shadow-light);
-      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border-light);
     }
 
     .neu-card {
       background: var(--surface-color);
-      border-radius: 16px;
-      box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
-      transition: all 0.3s ease;
-      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      border: 1px solid var(--border-light);
+      transition: all 0.2s ease;
     }
 
     .neu-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 12px 12px 20px var(--shadow-dark), -12px -12px 20px var(--shadow-light);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+      border-color: #cbd5e1;
     }
     
     .neu-input {
-      background: var(--surface-color);
-      border: none;
-      border-radius: 12px;
-      box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+      background: var(--bg-color);
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
       color: var(--text-main);
-      padding: 12px 16px;
+      padding: 10px 14px;
       transition: all 0.2s ease;
+      font-size: 14px;
     }
     
     .neu-input:focus {
       outline: none;
-      box-shadow: inset 6px 6px 12px var(--shadow-dark), inset -6px -6px 12px var(--shadow-light);
-      color: var(--accent);
+      background: var(--surface-color);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
     }
 
     .neu-btn {
       background: var(--surface-color);
-      border-radius: 12px;
-      box-shadow: 6px 6px 10px var(--shadow-dark), -6px -6px 10px var(--shadow-light);
-      color: #64748b;
-      font-weight: 600;
-      transition: all 0.2s ease;
-      border: 1px solid rgba(255,255,255,0.1);
-      display: flex;
+      border-radius: 8px;
+      border: 1px solid var(--border-light);
+      color: var(--text-main);
+      font-weight: 500;
+      transition: all 0.15s ease;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+      cursor: pointer;
     }
 
     .neu-btn:hover {
-      color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 8px 8px 15px var(--shadow-dark), -8px -8px 15px var(--shadow-light);
+      background: #f1f5f9;
+      color: var(--text-main);
+      border-color: #cbd5e1;
     }
 
     .neu-btn:active, .neu-btn.active {
-      box-shadow: inset 4px 4px 8px var(--shadow-dark), inset -4px -4px 8px var(--shadow-light);
-      color: var(--accent);
+      background: #e2e8f0;
       transform: translateY(1px);
     }
 
     .neu-btn-primary {
-      color: var(--accent);
+      background: var(--accent);
+      color: white;
+      border: 1px solid var(--accent);
+      font-weight: 600;
     }
     
     .neu-btn-primary:hover {
-      text-shadow: 0 0 15px rgba(109, 93, 252, 0.4);
+      background: var(--accent-hover);
+      color: white;
+      border-color: var(--accent-hover);
+    }
+
+    /* Fixed priority overrides for specific primary btn text coloring */
+    button.neu-btn-primary, button.neu-btn-primary * {
+      color: white !important;
+    }
+    
+    button.neu-btn, a.neu-btn {
+      color: var(--text-main);
     }
 
     .neu-icon-box {
       width: 40px;
       height: 40px;
-      border-radius: 50%;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       background: var(--surface-color);
-      box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
-      color: #64748b;
+      border: 1px solid var(--border-light);
+      color: var(--text-muted);
     }
 
     /* Scrollbar Styling */
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: var(--bg-color); }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   `}</style>
 );
 
 // --- MAIN APP COMPONENT ---
 export default function App() {
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [darkMode]);
+
   const [user, setUser] = useState(null);
   const [view, setView] = useState('login');
   const [activeTab, setActiveTabState] = useState(() => {
@@ -230,7 +271,7 @@ export default function App() {
       if (docsRes.ok) setDocuments(await docsRes.json());
 
       // Fetch users ONLY if the user is an admin
-      if (role === 'admin') {
+      if (['admin', 'director'].includes(role)) {
         const usersRes = await fetch(`${API_URL}/users`, { headers });
         if (usersRes.ok) setUsers(await usersRes.json());
       } else {
@@ -243,7 +284,7 @@ export default function App() {
       }
 
       // Fetch contacts if Admin or Staff
-      if (role === 'admin' || role === 'staff') {
+      if (['admin', 'director'].includes(role) || role === 'staff') {
         const contactsRes = await fetch(`${API_URL}/contacts`, { headers });
         if (contactsRes.ok) setContacts(await contactsRes.json());
       }
@@ -596,6 +637,8 @@ export default function App() {
         notificationsCount={announcements.length}
         onToggleNotifications={() => setShowNotifications(true)}
         isMobile={isMobile}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grow">
@@ -789,7 +832,7 @@ function Avatar({ user, size = 'md' }) {
 }
 
 // --- NAVBAR ---
-function Navbar({ user, onLogout, activeTab, setActiveTab, notificationsCount, onToggleNotifications, isMobile }) {
+function Navbar({ user, onLogout, activeTab, setActiveTab, notificationsCount, onToggleNotifications, isMobile, darkMode, setDarkMode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const tabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -839,6 +882,9 @@ function Navbar({ user, onLogout, activeTab, setActiveTab, notificationsCount, o
 
           {/* Desktop User & Logout */}
           <div className="hidden md:flex items-center">
+            <button onClick={() => setDarkMode(!darkMode)} className="neu-btn px-2 py-2 mr-2 text-slate-500 hover:text-indigo-500 rounded-full" title="Toggle Theme">
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <NotificationBell count={notificationsCount} onClick={onToggleNotifications} />
             <div className="flex items-center mx-4 gap-3 bg-white/50 px-3 py-1.5 rounded-full border border-white shadow-sm">
               <Avatar user={user} size="sm" />
@@ -854,6 +900,9 @@ function Navbar({ user, onLogout, activeTab, setActiveTab, notificationsCount, o
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center">
+            <button onClick={() => setDarkMode(!darkMode)} className="neu-btn px-2 py-2 mr-2 text-slate-500 hover:text-indigo-500 rounded-full">
+              {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <NotificationBell count={notificationsCount} onClick={onToggleNotifications} isMobile={true} />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -934,14 +983,14 @@ function MallDashboard({ user, malls, units, onSaveUnit, onDeleteUnit, onUpdateI
           <h1 className="text-4xl font-extrabold text-slate-700 mb-2 tracking-tight">Property Portfolio</h1>
           <p className="text-slate-500 font-medium">Select a property to manage units and specifications.</p>
         </div>
-        {user.role === 'admin' && (
+        {['admin', 'director'].includes(user.role) && (
           <button onClick={() => setIsManaging(!isManaging)} className="mt-4 md:mt-0 neu-btn neu-btn-primary px-6 py-3">
             <Settings size={18} className="mr-2" /> Manage Properties
           </button>
         )}
       </div>
 
-      {isManaging && user.role === 'admin' && (
+      {isManaging && ['admin', 'director'].includes(user.role) && (
         <ManagePropertiesPanel
           malls={malls}
           onClose={() => setIsManaging(false)}
@@ -964,7 +1013,7 @@ function MallDashboard({ user, malls, units, onSaveUnit, onDeleteUnit, onUpdateI
               totalUnits={totalUnits}
               vacantUnits={vacantUnits}
               onClick={() => setSelectedMall(mall)}
-              isAdmin={user.role === 'admin'}
+              isAdmin={['admin', 'director'].includes(user.role)}
               onUpdateImage={onUpdateImage}
             />
           );
@@ -1248,7 +1297,7 @@ function MallDetail({ user, mall, units, onBack, onSaveUnit, onDeleteUnit }) {
         <button onClick={onBack} className="neu-btn px-4 py-2 text-slate-500 hover:text-indigo-600">
           <span className="mr-2">←</span> Back
         </button>
-        {user.role === 'admin' && (
+        {['admin', 'director'].includes(user.role) && (
           <button onClick={() => setIsManagingLevels(true)} className="neu-btn px-4 py-2 text-slate-600">
             <Settings size={16} className="mr-2" /> Manage Levels
           </button>
@@ -1260,7 +1309,7 @@ function MallDetail({ user, mall, units, onBack, onSaveUnit, onDeleteUnit }) {
           <h1 className="text-3xl font-extrabold text-slate-700 mb-2">{mall.name}</h1>
           <p className="text-slate-500 font-medium flex items-center"><MapPin size={16} className="mr-2 text-indigo-500" />{mall.location}</p>
         </div>
-        {user.role === 'admin' && (
+        {['admin', 'director'].includes(user.role) && (
           <button onClick={handleAddLevel} className="mt-6 md:mt-0 neu-btn neu-btn-primary px-6 py-3">
             <Plus size={18} className="mr-2" /> Add Level
           </button>
@@ -1305,7 +1354,7 @@ function MallDetail({ user, mall, units, onBack, onSaveUnit, onDeleteUnit }) {
               ))}
 
               {/* Add Unit Card */}
-              {user.role === 'admin' && (
+              {['admin', 'director'].includes(user.role) && (
                 <div onClick={() => handleAddNewUnit(level.name, level.order)} className="neu-card p-4 cursor-pointer flex flex-col items-center justify-center text-slate-400 hover:text-indigo-500 group min-h-[140px] shadow-inner">
                   <div className="neu-icon-box mb-2 group-hover:text-indigo-500">
                     <Plus size={20} />
@@ -1320,7 +1369,7 @@ function MallDetail({ user, mall, units, onBack, onSaveUnit, onDeleteUnit }) {
         {levelsData.length === 0 && (
           <div className="neu-panel p-12 text-center">
             <p className="text-slate-500 mb-4">No levels initialized.</p>
-            {user.role === 'admin' && (
+            {['admin', 'director'].includes(user.role) && (
               <button onClick={handleAddLevel} className="neu-btn inline-flex px-6 py-3">Create First Level</button>
             )}
           </div>
@@ -1506,7 +1555,7 @@ Kit. Fresh:${formData.kitchen_fa ? `Yes (${formData.kitchen_fa_val})` : 'No'}`;
             <p className="text-sm text-slate-500 font-mono">L{unit.level} • {formData.area_sqm || 0} sqm</p>
           </div>
           <div className="flex items-center space-x-3">
-            {!isEditing && user.role === 'admin' && (
+            {!isEditing && ['admin', 'director'].includes(user.role) && (
               <button onClick={() => setIsEditing(true)} className="neu-btn neu-btn-primary px-4 py-2 text-sm">
                 <Edit3 size={16} className="mr-2" /> Edit
               </button>
@@ -1630,7 +1679,7 @@ Kit. Fresh:${formData.kitchen_fa ? `Yes (${formData.kitchen_fa_val})` : 'No'}`;
         {isEditing && (
           <div className="p-6 border-t border-slate-300/50 flex justify-between bg-white/30">
             <div>
-              {!unit.isNew && user.role === 'admin' && (
+              {!unit.isNew && ['admin', 'director'].includes(user.role) && (
                 <button onClick={() => { if (window.confirm('Delete?')) { onDelete(unit.id); onClose(); } }} className="neu-btn px-4 py-2 text-red-500">
                   <Trash2 size={16} className="mr-2" /> Delete
                 </button>
@@ -1761,7 +1810,7 @@ function DocumentPanel({ user, docs, malls, onAddDoc, onDeleteDoc }) {
                               <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
                                 {doc.file_url.endsWith('.pdf') ? <FileText size={16} /> : <Image size={16} />}
                               </div>
-                              {user.role === 'admin' && (
+                              {['admin', 'director'].includes(user.role) && (
                                 <button onClick={() => onDeleteDoc(doc.id)} className="text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                               )}
                             </div>
@@ -1812,7 +1861,7 @@ function DocList({ title, type, docs, user, onDelete, color, icon }) {
               <a href={`${API_URL}${doc.file_url}`} target="_blank" rel="noreferrer" className="neu-btn w-8 h-8 flex items-center justify-center">
                 <Download size={14} />
               </a>
-              {user.role === 'admin' && (
+              {['admin', 'director'].includes(user.role) && (
                 <button onClick={() => onDelete(doc.id)} className="neu-btn w-8 h-8 text-red-500">
                   <Trash2 size={14} />
                 </button>
@@ -1900,7 +1949,7 @@ function UserManagement({ currentUser, users, onAddUser, onDeleteUser, onChangeP
   // If user is Staff/Agent, only show themselves (which should be in users list if passed correctly or check currentUser)
   // For Staff/Agent, they just want to change their own password.
   // We can simplify the UI for non-admins.
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = ['admin', 'director'].includes(currentUser.role);
 
   if (!isAdmin) {
     return (
@@ -1965,8 +2014,9 @@ function UserManagement({ currentUser, users, onAddUser, onDeleteUser, onChangeP
                 <label className="block text-xs font-bold text-slate-400 uppercase mb-1 ml-1">Role</label>
                 <select className="neu-input w-full" value={newRole} onChange={e => setNewRole(e.target.value)}>
                   <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
                   <option value="agent">Agent</option>
+                  <option value="director">Director</option>
+                  <option value="admin">Admin</option>
                 </select>
               </div>
               <button type="submit" className="neu-btn neu-btn-primary px-6 py-3 w-full md:w-auto">Save</button>
@@ -1979,7 +2029,31 @@ function UserManagement({ currentUser, users, onAddUser, onDeleteUser, onChangeP
         {users.map(u => (
           <div key={u.id} className="neu-card p-6 flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
-              <Avatar user={u} size="md" />
+              <div className="relative group">
+                <Avatar user={u} size="md" />
+                {u.id === currentUser.id && (
+                  <>
+                    <button
+                      onClick={() => document.getElementById('admin-avatar-upload').click()}
+                      className="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-1 rounded-full shadow-sm hover:bg-indigo-700 hover:scale-105 transition-all opacity-0 group-hover:opacity-100"
+                      title="Update Avatar"
+                    >
+                      <Camera size={12} />
+                    </button>
+                    <input
+                      id="admin-avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) onUpdateAvatar(file);
+                        e.target.value = ''; // Reset input
+                      }}
+                    />
+                  </>
+                )}
+              </div>
               {u.email !== 'admin@pancatz.com' && u.email !== 'sudo@pancatz.com' && u.id !== currentUser.id && (
                 <button onClick={() => onDeleteUser(u.id)} className="text-slate-300 hover:text-red-500">
                   <Trash2 size={18} />
@@ -1989,7 +2063,7 @@ function UserManagement({ currentUser, users, onAddUser, onDeleteUser, onChangeP
             <div>
               <h3 className="text-lg font-bold text-slate-700">{u.firstName || (u.email ? u.email.split('@')[0] : 'User')} {u.lastName || ''}</h3>
               <p className="text-xs text-slate-400 truncate">{u.email}</p>
-              <span className={`inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${u.role === 'admin' ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
+              <span className={`inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${['admin', 'director'].includes(u.role) ? 'bg-purple-100 text-purple-600' : 'bg-slate-100 text-slate-500'}`}>
                 {u.role}
               </span>
             </div>

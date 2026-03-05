@@ -1,29 +1,100 @@
-# System Log & Changelog
-**Date:** 2026-02-27
-**Target Application:** Engwah Leasing System
+# Changelog — Engwah Leasing Portal
 
-## Core Architectural Upgrades
+All notable changes to this project are documented in this file.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-### 1. Database Layer Transformation (MySQL -> PostgreSQL)
-- **Engine Replacement**: Removed `mysql:8.0` from both development and production `docker-compose` clusters. Exchanged with `pgvector/pgvector:pg16` to provide out-of-the-box semantic search capacity for the LLM.
-- **ORM Integration**: Stripped raw `mysql2` strings and implemented **Drizzle ORM** within a natively typed environment (`server.js` -> `server.ts`).
-- **Type-Safety Enforcement**: Configured `package.json` to leverage `tsx` (TypeScript Execute) for instant server compilation, fortifying all backend payload structures to mimic original API schema definitions natively.
-- **Schema Mapping**: Deployed comprehensive TypeScript definitions mimicking the original legacy application via `src/db/schema.ts`, including mapping features for real-time JSONB elements and array indexing to optimize property iterations.
+---
 
-### 2. Node.js Dependency Resolution (`bcrypt_lib.node` execution crash)
-- **Problem**: Host-compiled C++ binaries from `bcrypt` triggered an `ERR_DLOPEN_FAILED: Exec format error` when attempting to mount deeply inside the `node:18-alpine` Alpine Linux instance container.
-- **Solution**: Removed the platform-dependent `bcrypt` library globally and standardized the environment with `bcryptjs` (a pure-JavaScript cross-platform cryptographic port). Successfully booted and connected the Docker registry.
+## [1.0.0] — 2026-03-05 🎉 Initial Production Release
 
-### 3. Model Context Protocol (MCP) Design & Implementation
-- Generated `schema.md` within the application root to establish the canonical reference map for abstract AI integration routines.
-- Injected `embedding vector(384)` logic within the property structure (the `units` table) natively tracking real estate spaces systematically inside PostgreSQL against vector distance algorithms.
+### 🔐 Security Hardening
+- **[CRIT]** Removed hardcoded credential bypass (`password !== 'password'`) from login endpoint
+- **[CRIT]** JWT tokens now issued with `24h` expiry on all auth routes (login + setup)
+- **[CRIT]** CORS replaced from open wildcard to configurable `ALLOWED_ORIGINS` allowlist
+- **[CRIT]** Added startup guard — server logs FATAL and exits in production if `JWT_SECRET` is unset
+- **[MAJOR]** Multer file uploads now enforce 10MB size limit and strict MIME type allowlist (JPEG, PNG, WEBP, PDF, DOCX, XLSX)
+- **[MAJOR]** PostgreSQL port rebound to `127.0.0.1` to prevent public network database exposure
+- **[MINOR]** Announcement author now correctly resolved from JWT `email` field (previous value was always `"system"`)
+- **[MINOR]** `OLLAMA_API_KEY` removed from `.env.example` template — replaced with safe placeholder
 
-### 4. Eva's Live Cognitive Framework (`.workspace`)
-Created and permanently mounted the `/.workspace` knowledge layer within the backend API logic. Eva dynamically assesses these 5 core `.workspace` files dynamically via `fs.readFileSync` per-chat, enabling live "hot loads" of her persona without needing to reboot the Docker instance:
-- **`Identity.md`**: Implemented strict, formal conversational styles mirroring a Senior Leasing Analyst while enforcing Read-Only role logic against `agent` and `staff` hierarchies.
-- **`soul.md`**: Defined her autonomous property analytical function.
-- **`heart.md`**: Sequenced the contextual `refreshEvaContext` event triggers that "breathe" live properties/units payload JSON into her immediate LLM memory bank.
-- **`memory.md`**: Programmed 30-day PostgreSQL retention constraints layered over native pgvector embeddings mapping abstract semantic descriptions.
-- **`sop.md`**: Hardcoded operational step-by-step logic rules she applies immediately prior to evaluating response payloads in markdown syntax.
+### 🎨 UI/UX — Focused Design Overhaul (Axiom Principles)
+- Replaced heavy neumorphic theme with a clean, high-contrast minimal design system
+- Removed animated CSS background and heavy `backdrop-filter` blurs to reduce GPU load
+- Standardized all component styling via CSS variables (`--bg-color`, `--surface-color`, `--accent`, etc.)
+- Replaced all gradient buttons with solid `bg-indigo-600` for consistent legibility
+- Implemented **Dark Mode / Light Mode** toggle with `localStorage` persistence
+- Dark mode injects `.dark` class on `<html>` and remaps all hardcoded Tailwind color classes
 
-All infrastructure was subsequently verified against `docker-compose up --build` with live confirmation that the Node application (`ew_api`) instantiated port 5000 successfully and connected to PostgreSQL natively with Eva's brain framework loaded.
+### 🤖 Eva AI Chatbot Enhancements
+- Corrected initial greeting: fixed typo, swapped `user.username` → `user.firstName`
+- Textarea auto-expands vertically as user types (no more clipping on multi-line input)
+- `\refresh` command restricted to Admin and Director roles only
+- Eva context is now manually refreshed on demand — removed any automatic periodic triggers
+- Eva workspace files (`.workspace/`) remain hot-reloaded per chat without container restart
+
+### 👥 Role & User Management
+- Added **Director** role throughout the system (same permissions as Admin)
+- Added `Director` option to the User Creation dropdown in the Users panel
+- Admin and Director users can now update their own avatar directly from the Users grid (hover-activated camera overlay)
+- Role badge for `admin` and `director` users displays in purple; other roles in slate
+
+### 📣 Announcements / Notifications
+- `canCreate` and `canDelete` permissions updated to include `director` role
+- "Post Announcement" button restyles to `neu-btn neu-btn-primary` (removed gradient)
+
+### 📊 Dashboard
+- Replaced `glass-card` CSS class with standardized `neu-card` across all dashboard widgets
+- Calendar dot rendering migrated from CSS class to Tailwind utility classes
+
+### 🏗️ Infrastructure
+- Added `SETUP_DEPLOYMENT.md` with step-by-step deployment guide including env vars, Docker, and AI config
+- Created `FCA_AUDIT_REPORT.txt` — comprehensive Final Code Auditor security report
+- `.prodignore/` folder created — quarantines all dev artifacts, AI persona files, and one-off scripts
+- `.gitignore` updated to exclude `.prodignore/` from all git pushes
+- Merged and resolved all git conflicts in `Readme.md`
+- `Readme.md` fully rewritten to reflect current architecture, roles, tech stack, and env var requirements
+
+---
+
+## [0.5.0] — 2026-02-27 Dashboard UI Redesign
+
+- Full dashboard UI redesign with recharts integration
+- Calendar view with note-taking per date
+- Team online/offline status via heartbeat API
+- Announcement notification bell added to Navbar
+
+---
+
+## [0.4.0] — 2026-02-26 Ollama Cloud Integration
+
+- Backend updated to support `LLM_PROVIDER=openai` for cloud-hosted models
+- `LLM_API_URL` and `OLLAMA_API_KEY` environment variables introduced
+- Dual-path rendering: local Ollama vs OpenAI-compatible cloud payloads
+
+---
+
+## [0.3.0] — 2026-02-25 Production Deployment with Traefik
+
+- `docker-compose.prod.yml` created with Traefik reverse proxy
+- SSL termination and service discovery via Traefik labels
+- Multi-stage Dockerfile for frontend production build
+
+---
+
+## [0.2.0] — 2026-02-12 Markdown Chat & Eva Memory
+
+- `react-markdown` integrated for rich text rendering in Eva's responses
+- Chat history passed to LLM (last 6 messages as context window)
+- Chat logs persisted to PostgreSQL with 30-day retention cleanup
+
+---
+
+## [0.1.0] — 2026-02-05 Foundation
+
+- PostgreSQL + pgvector replacing MySQL
+- Drizzle ORM migration from raw SQL
+- `server.js` → `server.ts` TypeScript conversion
+- Eva AI chatbot with `.workspace` persona system
+- RBAC: Admin, Staff, Agent roles
+- Full Docker Compose orchestration

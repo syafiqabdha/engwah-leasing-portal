@@ -193,23 +193,7 @@ export default function Dashboard({ user, malls, units }) {
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
 
-            <style>{`
-        .glass-card {
-          background: rgba(255, 255, 255, 0.7);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 24px;
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        }
-        .calendar-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: var(--accent);
-          margin-top: 2px;
-        }
-      `}</style>
+
 
             {/* HEADER SECTION */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -217,7 +201,7 @@ export default function Dashboard({ user, malls, units }) {
                     <h1 className="text-3xl font-extrabold text-slate-800 tracking-tight">Executive Overview</h1>
                     <p className="text-slate-500 font-medium">Welcome back, <span className="text-indigo-600 font-bold">{user.firstName || (user.email ? user.email.split('@')[0] : 'User')}</span>.</p>
                 </div>
-                <div className="glass-card px-4 py-2 flex items-center space-x-3">
+                <div className="neu-card px-4 py-2 flex items-center space-x-3">
                     <div className="neu-icon-box bg-green-50 text-green-600 shadow-none scale-90">
                         <LayoutGrid size={18} />
                     </div>
@@ -231,7 +215,7 @@ export default function Dashboard({ user, malls, units }) {
             {/* PROPERTY PERFORMANCE CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 {chartData.map((mallData) => (
-                    <div key={mallData.id} className="glass-card p-6 flex flex-col h-[400px]">
+                    <div key={mallData.id} className="neu-card p-6 flex flex-col h-[400px]">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-sm font-bold text-slate-700 truncate pr-4">{mallData.name}</h3>
                             <div className="px-3 py-1 rounded-full bg-slate-100/80 border border-slate-200 text-[10px] font-black tracking-widest text-slate-500 uppercase whitespace-nowrap shadow-sm">
@@ -301,7 +285,7 @@ export default function Dashboard({ user, malls, units }) {
             {/* ROW 3: CALENDAR & TEAM STATUS */}
             <div className="flex flex-col gap-8">
                 {/* CALENDAR & NOTES COMBINED */}
-                <div className="glass-card p-6 flex flex-col">
+                <div className="neu-card p-6 flex flex-col">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-inner">
@@ -333,7 +317,7 @@ export default function Dashboard({ user, malls, units }) {
                                     className={`h-12 flex flex-col items-center justify-center rounded-xl transition-all border ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-200 ring-offset-1' : 'bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200 text-slate-600'}`}
                                 >
                                     <span className="text-sm font-bold">{date.getDate()}</span>
-                                    {hasNotes && <div className={`calendar-dot ${isSelected ? 'bg-white' : ''}`}></div>}
+                                    {hasNotes && <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-indigo-600'}`}></div>}
                                 </button>
                             );
                         })}
@@ -378,7 +362,7 @@ export default function Dashboard({ user, malls, units }) {
                 </div>
 
                 {/* TEAM STATUS */}
-                <div className="glass-card p-6 flex flex-col justify-center items-center">
+                <div className="neu-card p-6 flex flex-col justify-center items-center">
                     <h3 className="text-lg font-bold text-slate-700 mb-4">Team Directory</h3>
 
                     <div className="flex justify-center flex-wrap gap-4 py-4 px-4 w-full bg-slate-50/50 rounded-2xl border border-slate-100 shadow-inner">

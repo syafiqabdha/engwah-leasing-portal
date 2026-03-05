@@ -21,3 +21,6 @@ npm-debug.log*
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Production-ignore: dev artifacts, AI personas, one-off scripts
+.prodignore/

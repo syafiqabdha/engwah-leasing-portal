@@ -18,14 +18,14 @@ export default function EvaChatbot({ user, malls, units }) {
                 setMessages([
                     {
                         sender: 'eva',
-                        text: `Hi ${user.username || 'User'}, I am Eva you AI assitant for EW property information. How can i assist you today, Which property you like to know.\n\nNote:This model trained to provide you the information of the EW property.`
+                        text: `Hi ${user.firstName || 'User'}, I am Eva, your AI assistant for EW property information. How can I assist you today? Which property would you like to know about?\n\nNote: This model is trained to provide you with information regarding EW properties.`
                     }
                 ]);
                 setIsTyping(false);
             }, 1000);
             return () => clearTimeout(timeout);
         }
-    }, [user.username, malls.length, messages.length]);
+    }, [user.firstName, malls.length, messages.length]);
 
     const scrollToBottom = () => {
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -178,7 +178,7 @@ export default function EvaChatbot({ user, malls, units }) {
                     {/* Header */}
                     <div className="bg-white border-b border-slate-100 p-4 flex justify-between items-center shadow-sm z-10">
                         <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md">
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center shadow-sm">
                                 <Bot size={20} className="text-white" />
                             </div>
                             <div className="ml-3">
@@ -231,11 +231,16 @@ export default function EvaChatbot({ user, malls, units }) {
                                 placeholder="Type your message..."
                                 rows={1}
                                 value={input}
-                                onChange={e => setInput(e.target.value)}
+                                onChange={e => {
+                                    setInput(e.target.value);
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = (e.target.scrollHeight) + 'px';
+                                }}
                                 onKeyDown={e => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
                                         handleSend(e);
+                                        e.target.style.height = 'auto';
                                     }
                                 }}
                                 aria-label="Chat message"
@@ -257,7 +262,7 @@ export default function EvaChatbot({ user, malls, units }) {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="pointer-events-auto bg-linear-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white p-4 rounded-full shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center mb-2 mr-2 group"
+                    className="pointer-events-auto bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-full shadow-md hover:-translate-y-1 transition-all duration-300 flex items-center justify-center mb-2 mr-2 group"
                     aria-label="Open chat"
                 >
                     <MessageSquare size={24} className="fill-current" />
