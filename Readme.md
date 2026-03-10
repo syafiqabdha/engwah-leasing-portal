@@ -1,249 +1,186 @@
 # 🏢 Engwah Leasing Portal
 
-![Status](https://img.shields.io/badge/Status-Ready%20to%20Deploy-brightgreen?style=flat-square)
-![Version](https://img.shields.io/badge/Version-v1.0-blue?style=flat-square)
-![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20PostgreSQL-informational?style=flat-square)
-![PWA](https://img.shields.io/badge/PWA-Enabled-purple?style=flat-square)
-![Docker](https://img.shields.io/badge/Deploy-Docker%20Compose-2496ED?style=flat-square&logo=docker)
-
 > A modern, enterprise-grade Property Management System for commercial real estate and shopping malls — with a built-in AI analyst, **Eva**.
 
----
+![Status](https://img.shields.io/badge/Status-Ready%20to%20Deploy-brightgreen?style=flat-square)
+![Stack](https://img.shields.io/badge/Stack-React%20%7C%20Node.js%20%7C%20PostgreSQL-informational?style=flat-square)
+![Deploy](https://img.shields.io/badge/Deploy-Docker%20Compose-2496ED?style=flat-square&logo=docker)
 
-## ✨ Why This System?
+## 📋 Overview
+The Engwah Leasing Portal is a containerized, full-stack application designed to streamline the management of retail properties, units, tenants, and commercial documents. It features a unique, context-aware AI assistant (Eva) that interfaces directly with the live database to provide insights.
 
-| Advantage | Description |
-|---|---|
-| 🚢 **Zero-Maintenance Deployment** | Entire stack is fully containerized with Docker — one command to run everything |
-| 🏠 **Local-First** | Runs on your own server. No cloud charges, no vendor lock-in |
-| 🧠 **Built-in AI (Eva)** | Context-aware AI assistant that reads your live database and answers leasing queries |
-| 📱 **PWA Ready** | Install on iOS and Android directly from the browser — works like a native app |
-| 🔐 **Production-Hardened** | JWT authentication with expiry, CORS allowlisting, RBAC, file type validation, rate limiting |
-| 🔄 **Easy Updates** | Push to your Git remote and pull on the host to deploy any update |
+[Insert Screenshot: Main Dashboard view showing property metrics and occupancy charts]
 
----
+## 🏗️ Visual Architecture & Flows
 
-## 🏗️ System Architecture
+### System Architecture
+```mermaid
+graph TD
+    Client[User Browser - PWA / React 19] -->|HTTP / REST API| Frontend[Frontend: Vite on Port 5173]
+    Frontend -->|API Proxy: /api| Backend[Backend: Express / Node.js on Port 5000]
+    Backend -->|Drizzle ORM| Database[(PostgreSQL + pgvector on Port 5432)]
+    Backend -->|REST| LocalLLM[Ollama Local LLM on Port 11434]
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                        USER BROWSER                           │
-│               http://localhost:5173  (PWA installable)        │
-└────────────────────────────┬──────────────────────────────────┘
-                             │ HTTP / REST API
-                             ▼
-┌──────────────────────────────────────────────────────────────┐
-│             FRONTEND  (React 19 + Vite)  :5173               │
-│   Dashboard · Properties · Documents · Contacts · Eva Chat   │
-└────────────────────────────┬─────────────────────────────────┘
-                             │ Vite Proxy → /api → :5000
-                             ▼
-┌──────────────────────────────────────────────────────────────┐
-│          BACKEND  (Node.js + Express + TypeScript)  :5000    │
-│   Auth · RBAC · File Uploads · Announcements · Chat API      │
-└────────┬──────────────────────────────────────┬─────────────┘
-         │ Drizzle ORM                           │ LLM API
-         ▼                                       ▼
-┌─────────────────────┐            ┌─────────────────────────┐
-│  PostgreSQL :5432   │            │  Ollama (Local LLM)     │
-│  + pgvector ext.    │            │  :11434 (auto model     │
-│  Data & Chat Logs   │            │   pull on startup)      │
-└─────────────────────┘            └─────────────────────────┘
+    subgraph Storage
+      Database
+    end
+
+    subgraph AI Engine
+      LocalLLM
+    end
 ```
 
----
+### Database Schema (ERD)
+```mermaid
+erDiagram
+    users {
+        int id PK
+        string email
+        string password_hash
+        string first_name
+        string last_name
+        string role "admin, director, staff, agent"
+    }
+    malls {
+        int id PK
+        string name
+        string location
+        string image_url
+    }
+    units {
+        int id PK
+        int mall_id FK
+        string unit_no
+        string level
+        string status "vacant, occupied, reserved"
+        decimal area_sqm
+        string tenant_name
+    }
+    sales_kits {
+        int id PK
+        int mall_id FK
+        string title
+        string type "sales, ads, floorplan, others"
+        string file_url
+    }
+    contacts {
+        int id PK
+        string name
+        string email
+        string type "Tenant, Agent, Vendor"
+    }
+    announcements {
+        int id PK
+        string title
+        string target_property "Specific mall or General"
+        date expiry_date
+    }
+    chat_logs {
+        int id PK
+        int user_id FK
+        string message
+        string response
+    }
 
-## 🔑 Key Features
-
-### 🏢 Property & Unit Management
-- Create and manage full **Mall portfolios** with photo uploads and location metadata
-- Hierarchical **Level Management** (reorder, rename levels within each mall)
-- Granular **Unit Tracking** per floor: status (`Vacant`, `Occupied`, `Reserved`), area, tenant name, person-in-charge
-- Full M&E technical specs per unit: AC power, FCU count, water points, floor traps, drainage, gas pipe, kitchen exhaust, fire safety, data ports
-
-### 🤖 Eva — AI Leasing Analyst
-- Powered by a local **Ollama LLM** (default: `qwen2.5:1.5b`) or any **OpenAI-compatible cloud provider**
-- Reads **live database context** on demand — knows every unit, tenant, document, and announcement
-- Admin/Director can trigger `\refresh` to force Eva to reload her memory from the latest data
-- Protected by per-user **rate limiting** (50 requests/hour) and **chat log audit trail**
-- Supports rich **Markdown** formatted responses
-
-### 📁 Document Repository
-- Upload and categorize **Sales Kits**, **Ads Kits**, **Floor Plans**, and **Legal Documents**
-- Each document is linked to a specific Mall property
-
-### 👥 Contacts CRM
-- Maintain a directory of **Tenants**, **Agents**, and **Vendors**
-- Accessible to Admin, Director, and Staff roles
-
-### � Announcements & Notifications
-- System-wide **Notification Bell** for broadcast announcements
-- Target announcements to a specific property or **General** (all-hands)
-- Admin and Director can post and delete announcements
-
-### 📊 Dashboard
-- Live **occupancy metrics** and summary charts per property
-- **Personal Notes** tied to calendar dates — visible to all team members
-- **Team Status** indicator showing who is currently online
-
-### 🌓 Dark / Light Mode
-- User preference is saved to `localStorage` and applied automatically on next visit
-
----
-
-## 🔐 Roles & Permissions
-
-| Role | Description | Key Permissions |
-|---|---|---|
-| **Director** | Board-level executive access | Full system control — same as Admin. Post/delete announcements, manage all users and properties |
-| **Admin** | System administrator | User management, all property operations, document management, announcement control |
-| **Staff** | Operational team member | Edit units, upload documents, post announcements, view contacts |
-| **Agent** | Read-only external access | View property availability and specs. Cannot edit or delete anything |
-
-> **First-time setup:** On first launch, the portal will prompt you to create the initial Admin account. No default credentials are pre-seeded.
-
----
-
-## 🛠️ Prerequisites
-
-Before you start, make sure you have the following installed on your host machine:
-
-- [**Docker**](https://docs.docker.com/get-docker/) (v24+)
-- [**Docker Compose**](https://docs.docker.com/compose/install/) (v2+)
-
----
-
-## 🚀 Installation & Execution
-
-### Step 1 — Clone the Repository
-```bash
-git clone <your-repo-url>
-cd ew-leasing-app
+    malls ||--o{ units : "contains"
+    malls ||--o{ sales_kits : "has documents"
+    users ||--o{ chat_logs : "creates"
 ```
 
-### Step 2 — Configure Environment Variables
-```bash
-cp backend/.env.example backend/.env
-```
-Then open `backend/.env` and set the required values:
+### User Journey Flow
+```mermaid
+flowchart LR
+    Start([Login Screen]) --> Auth{Authenticated?}
+    Auth -- Yes --> Dashboard[Dashboard Home]
+    Auth -- No --> Start
 
-```env
-# --- REQUIRED IN PRODUCTION ---
-JWT_SECRET=<generate with: openssl rand -hex 64>
-DB_PASSWORD=<your-strong-database-password>
-ALLOWED_ORIGINS=http://localhost:5173   # Add your domain for production
+    Dashboard --> Properties[Manage Properties & Units]
+    Dashboard --> Documents[Upload & View Documents]
+    Dashboard --> Contacts[CRM / Contacts]
+    Dashboard --> AI[Chat with Eva AI]
 
-# --- AI / LLM Configuration ---
-# Option A: Local Ollama (default, no key needed)
-LLM_PROVIDER=ollama
-LLM_MODEL=qwen2.5:1.5b
-OLLAMA_HOST=http://ollama:11434
-LLM_API_URL=http://ollama:11434/api/chat
-
-# Option B: Cloud LLM (OpenAI-compatible)
-LLM_PROVIDER=openai
-LLM_MODEL=<your-cloud-model>
-LLM_API_URL=<your-cloud-endpoint>
-OLLAMA_API_KEY=<your-api-key>
+    Properties --> EditUnit[Edit Unit Specs & Tenant Info]
+    Documents --> UploadDoc[Upload Sales Kits / Ads]
+    AI --> Ask[Ask Property Questions]
 ```
 
-### Step 3 — Start the Stack
-```bash
-docker-compose up --build
-```
+## ✨ Key Features
 
-**What spins up:**
+*   **🏢 Property & Unit Management**: Manage mall portfolios with photo uploads. Granular tracking of level orders and units (status, area, tenant details, M&E specs).
 
-| Container | Description | Port |
-|---|---|---|
-| 🐘 `db` | PostgreSQL + pgvector (initialized via `init.sql`) | `127.0.0.1:5432` |
-| ⚙️ `backend` | Node.js / Express REST API | `0.0.0.0:5000` |
-| 🎨 `frontend` | React + Vite UI | `0.0.0.0:5173` |
-| 🧠 `ollama` | Local LLM engine (auto-pulls model if missing) | `11434` |
+    [Insert Screenshot: Property Management view listing malls and units]
 
-### Step 4 — Open the Portal
-```
-http://localhost:5173
-```
-On **first launch**, you will be prompted to create your initial **Admin account**. No default passwords are pre-seeded.
+*   **🤖 AI Leasing Analyst (Eva)**: Powered by a local Ollama LLM (`qwen2.5:1.5b`), Eva reads live database context to answer complex property queries.
 
-> **📱 Install as PWA:** In your browser, tap *"Add to Home Screen"* to install the portal as a native-like app on iOS or Android.
+    [Insert Screenshot: Eva AI Chat interface showing an example query about property availability]
 
----
+*   **📁 Document Repository**: Upload and categorize Sales Kits, Ads, Floor Plans, and Legal Documents securely. Linked directly to specific malls.
+
+    [Insert Screenshot: Document Repository showing categorized uploaded files]
+
+*   **👥 Contacts CRM**: Directory of Tenants, Agents, and Vendors accessible to authorized roles.
+*   **🔔 Announcements System**: Broadcast system-wide or property-specific notifications with optional expiry dates.
+*   **🔐 Role-Based Access Control (RBAC)**: Secure JWT authentication with `admin`, `director`, `staff`, and `agent` roles.
+
+### Planned / WIP Features
+*   *Inventory Tracker* (Planned)
+*   *Team Chat* (Planned)
+*   *Cloud File Hub* (Planned)
+*   *Advanced Analytics / Revenue Forecasts* (Planned)
+
+## 🧰 Tech Stack
+
+*   **Frontend**: React 19, Vite (Rolldown), Tailwind CSS 4, Lucide React, Recharts
+*   **Backend**: Node.js, Express, TypeScript, Drizzle ORM
+*   **Database**: PostgreSQL 16 + `pgvector` extension
+*   **AI Engine**: Ollama (Local LLM - `qwen2.5:1.5b`)
+*   **Infrastructure**: Docker, Docker Compose
+
+## 🚀 Getting Started
+
+### Prerequisites
+*   [Docker](https://docs.docker.com/get-docker/) (v24+)
+*   [Docker Compose](https://docs.docker.com/compose/install/) (v2+)
+
+### Installation & Run
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd <project-folder>
+    ```
+
+2.  **Environment Setup:**
+    ```bash
+    cp backend/.env.example backend/.env
+    ```
+    Configure the variables in `backend/.env` (especially `JWT_SECRET` and `DB_PASSWORD`).
+
+3.  **Start Services via Docker Compose:**
+    ```bash
+    docker-compose up --build
+    ```
+    This spins up the Database (`pgvector`), Backend (`API`), Frontend (`React`), and the Local LLM (`Ollama`).
+
+4.  **Access the Portal:**
+    Open `http://localhost:5173` in your browser. On the first launch, you will be prompted to create your initial Admin account.
 
 ## 📂 Project Structure
 
 ```
-ew-leasing-app/
-├── 🖥️  backend/
-│   ├── src/
-│   │   └── db/
-│   │       ├── index.ts        # Drizzle DB connection
-│   │       └── schema.ts       # Database table definitions
-│   ├── .workspace/             # Eva AI persona & SOP files (mounted as Docker volume)
-│   │   ├── Identity.md
-│   │   ├── soul.md
-│   │   ├── heart.md
-│   │   ├── memory.md
-│   │   └── sop.md
-│   ├── uploads/                # User-uploaded files (malls, docs, avatars)
-│   ├── server.ts               # Main Express server, all routes & AI logic
-│   ├── .env.example            # Environment variable template
+.
+├── backend/            # Express Node.js API
+│   ├── src/            # Core logic (DB, schema)
+│   ├── .workspace/     # AI personas & SOPs
+│   ├── uploads/        # System storage (images, docs)
+│   ├── server.ts       # API & App entrypoint
 │   └── package.json
-│
-├── ⚛️  frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Dashboard.jsx          # Analytics, calendar, team status
-│   │   │   ├── EvaChatbot.jsx         # AI chat interface
-│   │   │   └── NotificationSystem.jsx # Announcements bell & panel
-│   │   ├── App.jsx             # Main app, routing, all page components
-│   │   ├── main.jsx            # React entrypoint
-│   │   └── index.css           # Tailwind CSS 4 import
-│   ├── public/
-│   ├── vite.config.js          # Vite + PWA + API proxy config
+├── frontend/           # React + Vite application
+│   ├── src/            # React components (Dashboard, App.jsx, etc.)
+│   ├── public/         # Static assets
+│   ├── vite.config.js  # Vite settings
 │   └── package.json
-│
-├── 🐳  docker-compose.yml      # Development orchestration
-├── 🐳  docker-compose.prod.yml # Production orchestration (Traefik)
-├── 📜  init.sql                # PostgreSQL + pgvector schema bootstrap
-├── 📖  schema.md               # Database schema reference
-├── 🔒  SECURITY_REPORT.md      # Security audit notes
-├── 📋  SETUP_DEPLOYMENT.md     # Detailed deployment guide
-└── �  CHANGELOG.md            # Version history
+├── docker-compose.yml  # Local Docker configuration
+├── init.sql            # Postgres database initialization script
+└── schema.md           # Database documentation details
 ```
-
----
-
-## 🧰 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 19, Vite (Rolldown), Tailwind CSS 4, Lucide React, Recharts, React Markdown |
-| **Backend** | Node.js, Express, TypeScript, Drizzle ORM |
-| **Database** | PostgreSQL 16 + pgvector extension |
-| **Auth** | JWT (24h expiry) + bcryptjs |
-| **File Handling** | multer (10MB limit, MIME validation) + sharp (image processing) |
-| **AI Engine** | Ollama (local) or any OpenAI-compatible cloud endpoint |
-| **Default LLM** | `qwen2.5:1.5b` (auto-downloaded on first run) |
-| **Containerization** | Docker Compose |
-| **PWA** | vite-plugin-pwa (Workbox) |
-
----
-
-## 🗺️ Future Roadmap
-
-| Feature | Description |
-|---|---|
-| 📦 **Inventory Tracker** | Real-time inventory management per property for the operations team |
-| 💬 **Team Chat** | Dedicated in-app communication channels per property or department |
-| ☁️ **Cloud File Hub** | Centralized, access-controlled shared document storage |
-| 📊 **Advanced Analytics** | Occupancy trend graphs, lease expiry tracking, revenue forecasts |
-
----
-
-<div align="center">
-
-Built with ❤️ for the Engwah team.
-
-</div>
